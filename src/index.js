@@ -1,40 +1,27 @@
 const { Direction } = require('./PathCard');
 const term = require('terminal-kit').terminal;
-const { renderBoard, STRAIGHT, CORNER, CROSS } = require('./Rendering');
-
 const {
-    buildBoard,
-    buildPathDeck,
-    buildTargetDeck,
-    shuffle,
-} = require('./GameFactory');
+    renderBoard,
+    renderPlayers,
+    STRAIGHT,
+    CORNER,
+    CROSS,
+} = require('./Rendering');
+const { Player } = require('./Player');
+const { initGame } = require('./GameFactory');
 
-const { board: board, targetNumber: fixedTargetNumber } = buildBoard();
-
-const pathDeck = shuffle(buildPathDeck(fixedTargetNumber));
-for (let c of pathDeck) {
-    // assign a random direction to each card of the deck
-    const i = Math.floor(Math.random() * 4);
-    c.direction = Direction[['NORTH', 'SOUTH', 'EAST', 'WEST'][i]];
-}
-
-for (let y = 0; y < board.size(); y++) {
-    for (let x = 0; x < board.size(); x++) {
-        if (!board.get(y, x)) {
-            const pathCard = pathDeck.pop();
-            pathCard.x = x;
-            pathCard.y = y;
-            board.add(pathCard);
-        }
-    }
-}
-
-const targetDeck = shuffle(buildTargetDeck(24));
+const NB_PLAYER = 1;
+const NB_TARGET_CARD = 24;
+const { board, players, remainingPathCard } = initGame(
+    NB_PLAYER,
+    NB_TARGET_CARD
+);
 
 term.windowTitle('Labyrinth game');
 term.eraseDisplay();
 
-renderBoard(board);
+renderBoard(term, board);
+renderPlayers(term, players);
 
 term.grabInput();
 term.on('key', function(key, matches, data) {

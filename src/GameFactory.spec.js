@@ -1,5 +1,13 @@
 const { Type } = require('./PathCard');
-const { buildBoard, buildPathDeck, shuffle } = require('./GameFactory');
+const {
+    initGame,
+    initPlayers,
+    dealCards,
+    buildBoard,
+    buildPathDeck,
+    buildTargetDeck,
+    shuffle,
+} = require('./GameFactory');
 
 describe('Board', () => {
     const { board, targetNumber } = buildBoard();
@@ -44,42 +52,165 @@ describe('Board', () => {
 
 describe('PathDeck', () => {
     const { board, targetNumber } = buildBoard();
-    const pathDeck = buildPathDeck(targetNumber);
+    const deck = buildPathDeck(targetNumber);
 
     test('total number of path cards', () => {
         const expectedTotalNumberOfPathCards = 1 + board.size() * board.size();
         const numberOfCORNER = 4;
-        expect(numberOfCORNER + targetNumber + pathDeck.length).toBe(
+        expect(numberOfCORNER + targetNumber + deck.length).toBe(
             expectedTotalNumberOfPathCards
         );
     });
 
     it('should contain 13 no-target straigth path cards', () => {
         expect(
-            pathDeck.filter(c => c.type == Type.STRAIGHT && c.target == null)
+            deck.filter(c => c.type == Type.STRAIGHT && c.target == null)
         ).toHaveLength(13);
     });
 
     it('should contain 9 no-target CORNER path cards', () => {
         expect(
-            pathDeck.filter(c => c.type == Type.CORNER && c.target == null)
+            deck.filter(c => c.type == Type.CORNER && c.target == null)
         ).toHaveLength(9);
     });
 
     it('should contain 6 target CORNER path cards', () => {
         expect(
-            pathDeck.filter(c => c.type == Type.CORNER && c.target !== null)
+            deck.filter(c => c.type == Type.CORNER && c.target !== null)
         ).toHaveLength(6);
     });
 
     it('should contain 6 target CROSS path cards', () => {
         expect(
-            pathDeck.filter(c => c.type == Type.CROSS && c.target !== null)
+            deck.filter(c => c.type == Type.CROSS && c.target !== null)
         ).toHaveLength(6);
     });
 
     test('shuffle function', () => {
-        const shuffledPathDeck = shuffle(pathDeck.slice()); // shuffle a copy
-        expect(shuffledPathDeck).not.toEqual(pathDeck);
+        const shuffledDeck = shuffle(deck.slice()); // shuffle a copy
+        expect(shuffledDeck).not.toEqual(deck);
+    });
+});
+
+describe('TargetDeck', () => {
+    const nbCards = 24;
+    const deck = buildTargetDeck(nbCards);
+
+    test('total number of cards', () => {
+        expect(deck).toHaveLength(24);
+    });
+
+    test('shuffle function', () => {
+        const shuffledDeck = shuffle(deck.slice()); // shuffle a copy
+        expect(shuffledDeck).not.toEqual(deck);
+    });
+});
+
+describe('InitPlayers with 1 player', () => {
+    const players = initPlayers(1);
+
+    it('should contain 1 player', () => {
+        expect(players).toHaveLength(1);
+    });
+
+    it('should be green and be in (0,0)', () => {
+        expect(players[0].color).toEqual('green');
+        expect(players[0].x).toBe(0);
+        expect(players[0].y).toBe(0);
+        expect(players[0].targetCards).toHaveLength(0);
+    });
+});
+
+describe('InitPlayers with 4 player', () => {
+    const players = initPlayers(4);
+
+    it('should contain 4 players', () => {
+        expect(players).toHaveLength(4);
+    });
+
+    test('player 0 should be green', () => {
+        expect(players[0].color).toEqual('green');
+        expect(players[0].x).toBe(0);
+        expect(players[0].y).toBe(0);
+        expect(players[0].targetCards).toHaveLength(0);
+    });
+    test('player 1 should be red', () => {
+        expect(players[1].color).toEqual('red');
+        expect(players[1].x).toBe(0);
+        expect(players[1].y).toBe(6);
+        expect(players[1].targetCards).toHaveLength(0);
+    });
+    test('player 2 should be yellow', () => {
+        expect(players[2].color).toEqual('yellow');
+        expect(players[2].x).toBe(6);
+        expect(players[2].y).toBe(6);
+        expect(players[2].targetCards).toHaveLength(0);
+    });
+    test('player 3 should be blue', () => {
+        expect(players[3].color).toEqual('blue');
+        expect(players[3].x).toBe(6);
+        expect(players[3].y).toBe(0);
+        expect(players[3].targetCards).toHaveLength(0);
+    });
+});
+
+describe('Deal cards ', () => {
+    it('should deal 24 cards to 1 player', () => {
+        const nbPlayers = 1;
+        const nbCards = 24;
+        const players = initPlayers(nbPlayers);
+        const deck = buildTargetDeck(nbCards);
+        expect(players).toHaveLength(nbPlayers);
+        expect(deck).toHaveLength(nbCards);
+
+        dealCards(players, deck);
+        expect(players[0].targetCards).toHaveLength(nbCards / nbPlayers);
+    });
+
+    it('should deal 12 cards to 2 players', () => {
+        const nbPlayers = 2;
+        const nbCards = 24;
+        const players = initPlayers(nbPlayers);
+        const deck = buildTargetDeck(nbCards);
+        expect(players).toHaveLength(nbPlayers);
+        expect(deck).toHaveLength(nbCards);
+
+        dealCards(players, deck);
+        expect(players[0].targetCards).toHaveLength(nbCards / nbPlayers);
+    });
+});
+
+describe('InitGame 1 player, 24 target cards', () => {
+    const { players, remainingPathCard } = initGame(1, 24);
+
+    it('should contain 1 player', () => {
+        expect(players).toHaveLength(1);
+    });
+
+    it('should give 24 target cards to player 1', () => {
+        expect(players[0].targetCards).toHaveLength(24);
+    });
+
+    it('should contain 1 remainging path card', () => {
+        expect(remainingPathCard).not.toBeNull();
+        expect(remainingPathCard.type).not.toBeNull();
+        expect(remainingPathCard.direction).not.toBeNull();
+    });
+});
+
+describe('InitGame 4 players, 24 target cards', () => {
+    const { players, remainingPathCard } = initGame(4, 24);
+    it('should contain 4 players', () => {
+        expect(players).toHaveLength(4);
+    });
+    it('should give 6 target cards to each player', () => {
+        for (let i = 0; i < 4; i++) {
+            expect(players[i].targetCards).toHaveLength(6);
+        }
+    });
+    it('should contain 1 remainging path card', () => {
+        expect(remainingPathCard).not.toBeNull();
+        expect(remainingPathCard.type).not.toBeNull();
+        expect(remainingPathCard.direction).not.toBeNull();
     });
 });

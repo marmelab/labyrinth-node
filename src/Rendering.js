@@ -28,7 +28,7 @@ function modelToScreen(x, y) {
     return { i: i, j: j };
 }
 
-function renderBoard(board) {
+function renderBoard(term, board) {
     for (let y = 0; y < board.size(); y++) {
         for (let x = 0; x < board.size(); x++) {
             const { i, j } = modelToScreen(x, y);
@@ -42,6 +42,14 @@ function render(term, i, j, pathCard) {
     const tile = getTile(pathCard);
     const target = pathCard ? pathCard.target : null;
     render_aux(terminal, i, j, tile, target);
+}
+
+function renderPlayers(term, players) {
+    players.forEach(p => {
+        const { i, j } = modelToScreen(p.x, p.y);
+        term.moveTo(1 + i, 1 + j); // +1 for the middle
+        term.bgBlue[p.color]('△');
+    });
 }
 
 function render_aux(terminal, i, j, tile, target) {
@@ -78,8 +86,17 @@ class Terminal {
 
     color(color, text) {
         switch (color) {
+            case 'green':
+                this.terminal.green(text);
+                break;
             case 'red':
                 this.terminal.red(text);
+                break;
+            case 'yellow':
+                this.terminal.yellow(text);
+                break;
+            case 'blue':
+                this.terminal.blue(text);
                 break;
         }
         return this;
@@ -95,4 +112,12 @@ class Terminal {
     }
 }
 
-module.exports = { render, render_aux, renderBoard, STRAIGHT, CORNER, CROSS };
+module.exports = {
+    render,
+    renderPlayers,
+    render_aux,
+    renderBoard,
+    STRAIGHT,
+    CORNER,
+    CROSS,
+};

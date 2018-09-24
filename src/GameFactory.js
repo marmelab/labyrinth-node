@@ -1,6 +1,7 @@
 const { PathCard, Type, Direction } = require('./PathCard');
 const { TargetCard } = require('./TargetCard');
 const { Board } = require('./Board');
+const { Player } = require('./Player');
 
 const buildBoard = () => {
     const board = new Board();
@@ -164,4 +165,74 @@ function shuffle(a) {
     return a;
 }
 
-module.exports = { buildBoard, buildPathDeck, buildTargetDeck, shuffle };
+function initPlayers(nbPlayers) {
+    const POS_COLOR = [
+        { x: 0, y: 0, color: 'green' },
+        { x: 0, y: 6, color: 'red' },
+        { x: 6, y: 6, color: 'yellow' },
+        { x: 6, y: 0, color: 'blue' },
+    ];
+
+    const players = Array.from(
+        { length: nbPlayers },
+        (_, k) => new Player(POS_COLOR[k])
+    );
+    return players;
+}
+
+function dealCards(players, cards) {
+    const nbPlayers = players.length;
+    const nbCards = cards.length;
+
+    for (let i = 0; i < nbPlayers; i++) {
+        for (let j = 0; j < nbCards / nbPlayers; j++) {
+            players[i].add(cards.pop());
+        }
+    }
+}
+
+function initGame(nbPlayers, nbTargetCards) {
+    const { board: board, targetNumber: fixedTargetNumber } = buildBoard();
+
+    const pathDeck = shuffle(buildPathDeck(fixedTargetNumber));
+
+    for (let c of pathDeck) {
+        // assign a random direction to each card of the deck
+        const i = Math.floor(Math.random() * 4);
+        c.direction = Direction[['NORTH', 'SOUTH', 'EAST', 'WEST'][i]];
+    }
+
+    for (let y = 0; y < board.size(); y++) {
+        for (let x = 0; x < board.size(); x++) {
+            if (!board.get(y, x)) {
+                const pathCard = pathDeck.pop();
+                pathCard.x = x;
+                pathCard.y = y;
+                board.add(pathCard);
+            }
+        }
+    }
+    const remainingPathCard = pathDeck.pop();
+
+    const targetDeck = shuffle(buildTargetDeck(nbTargetCards));
+
+    const players = initPlayers(nbPlayers);
+
+    dealCards(players, targetDeck);
+
+    return {
+        board: board,
+        players: players,
+        remainingPathCard: remainingPathCard,
+    };
+}
+
+module.exports = {
+    initGame,
+    initPlayers,
+    dealCards,
+    buildBoard,
+    buildPathDeck,
+    buildTargetDeck,
+    shuffle,
+};
