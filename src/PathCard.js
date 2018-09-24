@@ -1,10 +1,16 @@
 const Type = Object.freeze({ STRAIGHT: '|', CORNER: 'L', CROSS: 'T' });
 const Direction = Object.freeze({
-    NORTH: 'N',
-    SOUTH: 'S',
-    EAST: 'E',
-    WEST: 'W',
+    NORTH: 0,
+    EAST: 1,
+    SOUTH: 2,
+    WEST: 3,
 });
+const Directions = [
+    Direction.NORTH,
+    Direction.EAST,
+    Direction.SOUTH,
+    Direction.WEST,
+];
 
 /*
  * we consider that:
@@ -43,4 +49,4 @@ class PathCard {
     }
 }
 
-module.exports = { PathCard, Type, Direction };
+module.exports = { PathCard, Type, Direction, Directions };

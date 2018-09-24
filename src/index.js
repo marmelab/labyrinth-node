@@ -1,4 +1,7 @@
 const { Direction } = require('./PathCard');
+const term = require('terminal-kit').terminal;
+const { renderBoard, STRAIGHT, CORNER, CROSS } = require('./Rendering');
+
 const {
     buildBoard,
     buildPathDeck,
@@ -27,3 +30,37 @@ for (let y = 0; y < board.size(); y++) {
 }
 
 const targetDeck = shuffle(buildTargetDeck(24));
+
+term.windowTitle('Labyrinth game');
+term.eraseDisplay();
+
+renderBoard(board);
+
+term.grabInput();
+term.on('key', function(key, matches, data) {
+    switch (key) {
+        case 'UP':
+            term.up(1);
+            break;
+        case 'DOWN':
+            term.down(1);
+            break;
+        case 'LEFT':
+            term.left(1);
+            break;
+        case 'RIGHT':
+            term.right(1);
+            break;
+        case 'CTRL_C':
+            process.exit();
+            break;
+        default:
+            // Echo anything else
+            term.noFormat(
+                Buffer.isBuffer(data.code)
+                    ? data.code
+                    : String.fromCharCode(data.code)
+            );
+            break;
+    }
+});
