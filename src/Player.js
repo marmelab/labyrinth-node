@@ -1,17 +1,22 @@
+// we use a function here to avoid sharing the empty targetCards array
 const defaultPlayer = () => ({
-    color: null,
     x: null,
     y: null,
+    color: null,
     targetCards: [],
 });
 
 class Player {
-    constructor(o = defaultPlayer) {
+    constructor(parameters = {}) {
         const { x, y, color, targetCards } = Object.assign(
             {},
             defaultPlayer(),
-            o
+            parameters
         );
+        //I can't use the following construct
+        // { ...defaultPlayer(), ...parameters };
+        // because eslint does not accept the syntax wiht my config file
+
         this.color = color;
         this.x = x;
         this.y = y;

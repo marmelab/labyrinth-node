@@ -13,11 +13,11 @@ describe('Board', () => {
     const { board, targetNumber } = buildBoard();
 
     it('should contain NxN cells (PathCard or undefined)', () => {
-        for (let y = 0; y < board.size(); y++) {
-            for (let x = 0; x < board.size(); x++) {
-                expect(board.get(y, x)).not.toBeNull();
-            }
-        }
+        board.array.forEach(row =>
+            row.forEach(cell => {
+                expect(cell).not.toBeNull();
+            })
+        );
     });
 
     it('should contain 4 CORNERs', () => {
@@ -31,10 +31,9 @@ describe('Board', () => {
         expect(targetNumber).toBe(12);
     });
 
-    it('each target path card should be a CORNER or a CROSS', () => {
-        for (let y = 0; y < board.size(); y++) {
-            for (let x = 0; x < board.size(); x++) {
-                const card = board.get(y, x);
+    it('should only contain target paths which are either a CORNER or a CROSS', () => {
+        board.array.forEach((row, y) => {
+            row.forEach((card, x) => {
                 if (x % 2 == 0 && y % 2 == 0) {
                     expect(card).not.toBeNull();
                     expect(
@@ -45,8 +44,8 @@ describe('Board', () => {
                 } else {
                     expect(card).toBeUndefined();
                 }
-            }
-        }
+            });
+        });
     });
 });
 
@@ -86,7 +85,7 @@ describe('PathDeck', () => {
         ).toHaveLength(6);
     });
 
-    test('shuffle function', () => {
+    it("should return a deck where cards aren't in their original position", () => {
         const shuffledDeck = shuffle(deck.slice()); // shuffle a copy
         expect(shuffledDeck).not.toEqual(deck);
     });
@@ -96,11 +95,11 @@ describe('TargetDeck', () => {
     const nbCards = 24;
     const deck = buildTargetDeck(nbCards);
 
-    test('total number of cards', () => {
+    it('should have 24 cards', () => {
         expect(deck).toHaveLength(24);
     });
 
-    test('shuffle function', () => {
+    it("should return a deck where cards aren't in their original position", () => {
         const shuffledDeck = shuffle(deck.slice()); // shuffle a copy
         expect(shuffledDeck).not.toEqual(deck);
     });
@@ -128,25 +127,25 @@ describe('InitPlayers with 4 player', () => {
         expect(players).toHaveLength(4);
     });
 
-    test('player 0 should be green', () => {
+    it('should assign the green color to player 0', () => {
         expect(players[0].color).toEqual('green');
         expect(players[0].x).toBe(0);
         expect(players[0].y).toBe(0);
         expect(players[0].targetCards).toHaveLength(0);
     });
-    test('player 1 should be red', () => {
+    it('should assign the red color to player 1', () => {
         expect(players[1].color).toEqual('red');
         expect(players[1].x).toBe(0);
         expect(players[1].y).toBe(6);
         expect(players[1].targetCards).toHaveLength(0);
     });
-    test('player 2 should be yellow', () => {
+    it('should assign the yellow color to player 2', () => {
         expect(players[2].color).toEqual('yellow');
         expect(players[2].x).toBe(6);
         expect(players[2].y).toBe(6);
         expect(players[2].targetCards).toHaveLength(0);
     });
-    test('player 3 should be blue', () => {
+    it('should assign the blue color to player 3', () => {
         expect(players[3].color).toEqual('blue');
         expect(players[3].x).toBe(6);
         expect(players[3].y).toBe(0);
@@ -181,7 +180,7 @@ describe('Deal cards ', () => {
 });
 
 describe('InitGame 1 player, 24 target cards', () => {
-    const { players, remainingPathCard } = initGame(1, 24);
+    const { board, players, remainingPathCard } = initGame(1, 24);
 
     it('should contain 1 player', () => {
         expect(players).toHaveLength(1);
@@ -196,6 +195,14 @@ describe('InitGame 1 player, 24 target cards', () => {
         expect(remainingPathCard.type).not.toBeNull();
         expect(remainingPathCard.direction).not.toBeNull();
     });
+
+    it('should contain 49 path cards on board', () => {
+        const flattenArray = board.array.reduce(
+            (acc, val) => acc.concat(val),
+            []
+        );
+        expect(flattenArray.filter(element => element)).toHaveLength(49);
+    });
 });
 
 describe('InitGame 4 players, 24 target cards', () => {
@@ -204,9 +211,9 @@ describe('InitGame 4 players, 24 target cards', () => {
         expect(players).toHaveLength(4);
     });
     it('should give 6 target cards to each player', () => {
-        for (let i = 0; i < 4; i++) {
-            expect(players[i].targetCards).toHaveLength(6);
-        }
+        players.forEach(player => {
+            expect(player.targetCards).toHaveLength(6);
+        });
     });
     it('should contain 1 remainging path card', () => {
         expect(remainingPathCard).not.toBeNull();

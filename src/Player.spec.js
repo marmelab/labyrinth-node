@@ -1,7 +1,7 @@
 const { Player } = require('./Player');
 
 describe('Default Player', () => {
-    it('should initialize its value properly', () => {
+    it('should use default player color, coordinates, and an empty target card deck', () => {
         const player = new Player();
         expect(player.x).toBeNull();
         expect(player.y).toBeNull();
@@ -12,7 +12,7 @@ describe('Default Player', () => {
 });
 
 describe('Intialized Player', () => {
-    it('should initialize its value properly', () => {
+    it('should use the given parameters, and an empty target card deck', () => {
         const player = new Player({ x: 0, y: 0, color: 'green' });
         expect(player.x).toBe(0);
         expect(player.y).toBe(0);

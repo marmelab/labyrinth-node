@@ -1,4 +1,4 @@
-const { PathCard, Type, Direction } = require('./PathCard');
+const { PathCard, Type, Direction, Directions } = require('./PathCard');
 const { TargetCard } = require('./TargetCard');
 const { Board } = require('./Board');
 const { Player } = require('./Player');
@@ -191,34 +191,43 @@ function dealCards(players, cards) {
     }
 }
 
-function initGame(nbPlayers, nbTargetCards) {
-    const { board: board, targetNumber: fixedTargetNumber } = buildBoard();
+function dealCardsOnBoard(board, shuffledPathDeck) {
+    shuffledPathDeck.forEach(card => {
+        card.direction =
+            Directions[Math.floor(Math.random() * Directions.length)];
+    });
 
-    const pathDeck = shuffle(buildPathDeck(fixedTargetNumber));
-
-    for (let c of pathDeck) {
-        // assign a random direction to each card of the deck
-        const i = Math.floor(Math.random() * 4);
-        c.direction = Direction[['NORTH', 'SOUTH', 'EAST', 'WEST'][i]];
-    }
-
-    for (let y = 0; y < board.size(); y++) {
-        for (let x = 0; x < board.size(); x++) {
-            if (!board.get(y, x)) {
-                const pathCard = pathDeck.pop();
+    board.array.forEach((row, y) => {
+        row.forEach((cell, x) => {
+            if (!cell) {
+                const pathCard = shuffledPathDeck.pop();
                 pathCard.x = x;
                 pathCard.y = y;
                 board.add(pathCard);
             }
-        }
-    }
+        });
+    });
+}
+
+function initGame(nbPlayers, nbTargetCards) {
+    const {
+        board: board,
+        targetNumber: numberOfTargetAlreadyOnBoard,
+    } = buildBoard();
+
+    const pathDeck = buildPathDeck(numberOfTargetAlreadyOnBoard);
+    const shuffledPathDeck = shuffle(pathDeck);
+
+    dealCardsOnBoard(board, shuffledPathDeck);
+
     const remainingPathCard = pathDeck.pop();
 
-    const targetDeck = shuffle(buildTargetDeck(nbTargetCards));
+    const targetDeck = buildTargetDeck(nbTargetCards);
+    const suffledTargetDeck = shuffle(targetDeck);
 
     const players = initPlayers(nbPlayers);
 
-    dealCards(players, targetDeck);
+    dealCards(players, suffledTargetDeck);
 
     return {
         board: board,

@@ -5,12 +5,18 @@ const Direction = Object.freeze({
     SOUTH: 2,
     WEST: 3,
 });
+
 const Directions = [
     Direction.NORTH,
     Direction.EAST,
     Direction.SOUTH,
     Direction.WEST,
 ];
+
+function rotateDirection(direction, numberOfQuaters) {
+    const newDirection = (4 + direction + numberOfQuaters) % 4;
+    return newDirection;
+}
 
 /*
  * we consider that:
@@ -42,6 +48,30 @@ class PathCard {
         this.target = target;
     }
 
+    exitDirections() {
+        if (this.type == Type.STRAIGHT) {
+            const directions = [Direction.NORTH, Direction.SOUTH];
+            return directions.map(direction =>
+                rotateDirection(direction, this.direction)
+            );
+        } else if (this.type == Type.CORNER) {
+            const directions = [Direction.NORTH, Direction.EAST];
+            const res = directions.map(direction =>
+                rotateDirection(direction, this.direction)
+            );
+            return res;
+        } else if (this.type == Type.CROSS) {
+            const directions = [
+                Direction.NORTH,
+                Direction.EAST,
+                Direction.WEST,
+            ];
+            return directions.map(direction =>
+                rotateDirection(direction, this.direction)
+            );
+        }
+    }
+
     toString() {
         return `${this.type} direction:${this.direction} x:${this.x} y:${
             this.y
@@ -49,4 +79,4 @@ class PathCard {
     }
 }
 
-module.exports = { PathCard, Type, Direction, Directions };
+module.exports = { PathCard, Type, Direction, Directions, rotateDirection };

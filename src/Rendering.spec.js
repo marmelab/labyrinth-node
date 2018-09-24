@@ -1,9 +1,7 @@
 const {
-    renderBoard,
-    render_aux,
+    renderPathCardRepresentationAtScreenCoordinates,
     STRAIGHT,
     CORNER,
-    CROSS,
 } = require('./Rendering');
 const { Direction, Directions } = require('./PathCard');
 
@@ -32,8 +30,13 @@ describe('check tile size', () => {
     it('should contains 9 moves', () => {
         for (let dir of Directions) {
             const mock = new MockTerminal();
-            // console.log(STRAIGHT[dir]);
-            render_aux(mock, 0, 0, STRAIGHT[dir], null);
+            renderPathCardRepresentationAtScreenCoordinates(
+                mock,
+                0,
+                0,
+                STRAIGHT[dir],
+                null
+            );
             expect(mock.mockMoveTo.mock.calls).toHaveLength(9);
         }
     });
@@ -42,7 +45,13 @@ describe('check tile size', () => {
 describe('Straight', () => {
     it('should render a straight-north with ┃ only', () => {
         const mock = new MockTerminal();
-        render_aux(mock, 0, 0, STRAIGHT[Direction.NORTH], null);
+        renderPathCardRepresentationAtScreenCoordinates(
+            mock,
+            0,
+            0,
+            STRAIGHT[Direction.NORTH],
+            null
+        );
         expect(mock.mockColor.mock.calls).toHaveLength(6);
         expect(mock.mockBgColor.mock.calls).toHaveLength(3);
         // The 3rd argument of i-th call to mockColor should be '┃'
@@ -52,7 +61,13 @@ describe('Straight', () => {
     });
     it('should render a straight-east with ━ only', () => {
         const mock = new MockTerminal();
-        render_aux(mock, 0, 0, STRAIGHT[Direction.EAST], null);
+        renderPathCardRepresentationAtScreenCoordinates(
+            mock,
+            0,
+            0,
+            STRAIGHT[Direction.EAST],
+            null
+        );
         expect(mock.mockColor.mock.calls).toHaveLength(6);
         expect(mock.mockBgColor.mock.calls).toHaveLength(3);
         for (let i = 0; i < 6; i++) {
@@ -64,7 +79,13 @@ describe('Straight', () => {
 describe('Corner', () => {
     it('should render a corner-north correctly', () => {
         const mock = new MockTerminal();
-        render_aux(mock, 0, 0, CORNER[Direction.NORTH], null);
+        renderPathCardRepresentationAtScreenCoordinates(
+            mock,
+            0,
+            0,
+            CORNER[Direction.NORTH],
+            null
+        );
         expect(mock.mockColor.mock.calls).toHaveLength(6);
         expect(mock.mockBgColor.mock.calls).toHaveLength(3);
         const chars = '┃┗┃┗━━';
