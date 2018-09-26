@@ -2,9 +2,9 @@ const {
     renderPathCardRepresentationAtScreenCoordinates,
     STRAIGHT,
     CORNER,
-} = require('./Rendering');
+} = require('./rendering');
 
-const { Direction, Directions } = require('./PathCard');
+const { Direction } = require('./pathCard');
 
 const { terminal: term } = require('terminal-kit');
 
@@ -19,7 +19,7 @@ jest.mock('terminal-kit', () => {
 
 describe('check tile size', () => {
     it('should contains 9 moves', () => {
-        for (let dir of Directions) {
+        for (let dir of Object.values(Direction)) {
             term.moveTo.mockClear();
             renderPathCardRepresentationAtScreenCoordinates(
                 0,

@@ -1,3 +1,4 @@
+const { produce } = require('immer');
 const {
     renderBoard,
     renderPlayers,
@@ -5,17 +6,26 @@ const {
     renderRemainingPathCard,
     erasePathCard,
 } = require('./rendering');
-const { pathCardInsertionPosition } = require('./Board');
+
+const {
+    PATH_CARD_INSERTION_POSITION,
+    insertPathCardIntoBoard,
+} = require('./board');
+
 const { initGame } = require('./gameFactory');
+const {
+    getExitDirections,
+    Direction,
+    rotateDirection,
+    movePathCardTo,
+} = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
-const { Direction, rotateDirection } = require('./PathCard');
+const { createPlayer } = require('./player');
 
 const NB_PLAYER = 1;
 const NB_TARGET_CARD = 24;
-const { board, players, remainingPathCard } = initGame(
-    NB_PLAYER,
-    NB_TARGET_CARD
-);
+
+let { board, players, remainingPathCard } = initGame(NB_PLAYER, NB_TARGET_CARD);
 
 function getCoordinatesForAMove(x, y, direction) {
     switch (direction) {
@@ -31,30 +41,32 @@ function getCoordinatesForAMove(x, y, direction) {
 }
 
 function movePlayer(player, direction) {
-    const { x, y } = player;
-
+    const { x, y } = player.pathCard;
     const { x: nextX, y: nextY } = getCoordinatesForAMove(x, y, direction);
     if (
         nextX >= 0 &&
-        nextX < board.size() &&
+        nextX < board.length &&
         nextY >= 0 &&
-        nextY < board.size()
+        nextY < board.length
     ) {
-        const pathCard = board.get(y, x);
-
-        if (pathCard.exitDirections().includes(direction)) {
-            const nextPathCard = board.get(nextY, nextX);
-            const nextPathCardExitDirections = nextPathCard.exitDirections();
+        const pathCard = board[x][y];
+        if (getExitDirections(pathCard).includes(direction)) {
+            const nextPathCard = board[nextX][nextY];
+            const nextPathCardExitDirections = getExitDirections(nextPathCard);
             const nextPathCardEntranceDirections = nextPathCardExitDirections.map(
                 direction => rotateDirection(direction, 2)
             );
             if (nextPathCardEntranceDirections.includes(direction)) {
                 // the move is possible
-                player.x = nextX;
-                player.y = nextY;
+                return createPlayer(
+                    player.color,
+                    nextPathCard,
+                    player.targetCards
+                );
             }
         }
     }
+    return player;
 }
 
 term.windowTitle('Labyrinth game');
@@ -65,79 +77,98 @@ renderBoard(board);
 renderPlayers(players);
 renderInvite();
 
-let currentRemainingPathCard = remainingPathCard;
-let currentCardPosition = 0;
-currentRemainingPathCard.x = pathCardInsertionPosition[currentCardPosition].x;
-currentRemainingPathCard.y = pathCardInsertionPosition[currentCardPosition].y;
-renderRemainingPathCard(currentRemainingPathCard);
+let currentIndexOfPathCardInsertionPosition = 0;
+remainingPathCard = movePathCardTo(
+    remainingPathCard,
+    PATH_CARD_INSERTION_POSITION[currentIndexOfPathCardInsertionPosition].x,
+    PATH_CARD_INSERTION_POSITION[currentIndexOfPathCardInsertionPosition].y
+);
+renderRemainingPathCard(remainingPathCard);
 
 term.grabInput();
 term.on('key', function(key, matches, data) {
     switch (key) {
         case 'UP':
-            movePlayer(players[0], Direction.NORTH);
+            players[0] = movePlayer(players[0], Direction.NORTH);
             renderBoard(board);
             renderPlayers(players);
             break;
         case 'DOWN':
-            movePlayer(players[0], Direction.SOUTH);
+            players[0] = movePlayer(players[0], Direction.SOUTH);
             renderBoard(board);
             renderPlayers(players);
             break;
         case 'LEFT':
-            movePlayer(players[0], Direction.WEST);
+            players[0] = movePlayer(players[0], Direction.WEST);
             renderBoard(board);
             renderPlayers(players);
             break;
         case 'RIGHT':
-            movePlayer(players[0], Direction.EAST);
+            players[0] = movePlayer(players[0], Direction.EAST);
             renderBoard(board);
             renderPlayers(players);
             break;
         case 'j':
-            erasePathCard(currentRemainingPathCard);
-            currentCardPosition =
-                (pathCardInsertionPosition.length + currentCardPosition - 1) %
-                pathCardInsertionPosition.length;
-            currentRemainingPathCard.x =
-                pathCardInsertionPosition[currentCardPosition].x;
-            currentRemainingPathCard.y =
-                pathCardInsertionPosition[currentCardPosition].y;
-            renderRemainingPathCard(currentRemainingPathCard);
+            erasePathCard(remainingPathCard);
+            currentIndexOfPathCardInsertionPosition =
+                (PATH_CARD_INSERTION_POSITION.length +
+                    currentIndexOfPathCardInsertionPosition -
+                    1) %
+                PATH_CARD_INSERTION_POSITION.length;
+            remainingPathCard = movePathCardTo(
+                remainingPathCard,
+                PATH_CARD_INSERTION_POSITION[
+                    currentIndexOfPathCardInsertionPosition
+                ].x,
+                PATH_CARD_INSERTION_POSITION[
+                    currentIndexOfPathCardInsertionPosition
+                ].y
+            );
+            renderRemainingPathCard(remainingPathCard);
 
             break;
         case 'k':
-            erasePathCard(currentRemainingPathCard);
-            currentCardPosition =
-                (currentCardPosition + 1) % pathCardInsertionPosition.length;
-            currentRemainingPathCard.x =
-                pathCardInsertionPosition[currentCardPosition].x;
-            currentRemainingPathCard.y =
-                pathCardInsertionPosition[currentCardPosition].y;
-            renderRemainingPathCard(currentRemainingPathCard);
+            erasePathCard(remainingPathCard);
+            currentIndexOfPathCardInsertionPosition =
+                (currentIndexOfPathCardInsertionPosition + 1) %
+                PATH_CARD_INSERTION_POSITION.length;
+            remainingPathCard = movePathCardTo(
+                remainingPathCard,
+                PATH_CARD_INSERTION_POSITION[
+                    currentIndexOfPathCardInsertionPosition
+                ].x,
+                PATH_CARD_INSERTION_POSITION[
+                    currentIndexOfPathCardInsertionPosition
+                ].y
+            );
+            renderRemainingPathCard(remainingPathCard);
 
             break;
         case 'r':
         case 'R':
-            erasePathCard(currentRemainingPathCard);
-            currentRemainingPathCard.direction =
-                (currentRemainingPathCard.direction + 1) % 4;
-            renderRemainingPathCard(currentRemainingPathCard);
+            erasePathCard(remainingPathCard);
+            remainingPathCard = produce(remainingPathCard, draft => {
+                draft.direction = (remainingPathCard.direction + 1) % 4;
+            });
+            renderRemainingPathCard(remainingPathCard);
 
             break;
-        case 'ENTER':
-            erasePathCard(currentRemainingPathCard);
-            currentRemainingPathCard = board.insertPathCard(
-                currentRemainingPathCard
-            );
+        case 'ENTER': {
+            erasePathCard(remainingPathCard);
+            const {
+                board: newBoard,
+                pathCard: newRemainingPathCard,
+            } = insertPathCardIntoBoard(board, remainingPathCard);
 
-            renderRemainingPathCard(currentRemainingPathCard);
-            renderBoard(board);
+            renderRemainingPathCard(newRemainingPathCard);
+            renderBoard(newBoard);
             renderPlayers(players);
-
+            board = newBoard;
+            remainingPathCard = newRemainingPathCard;
             break;
+        }
         case 'CTRL_C':
-            term.showCursor();
+            term.hideCursor();
 
             process.exit();
             break;

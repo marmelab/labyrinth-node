@@ -1,4 +1,4 @@
-const { Type } = require('./PathCard');
+const { Type, movePathCardTo } = require('./pathCard');
 const {
     initGame,
     initPlayers,
@@ -7,24 +7,28 @@ const {
     buildPathDeck,
     buildTargetDeck,
     shuffle,
-} = require('./GameFactory');
+} = require('./gameFactory');
+
+const {
+    insertPathCardIntoBoard,
+    PATH_CARD_INSERTION_POSITION,
+} = require('./board');
 
 describe('Board', () => {
     const { board, targetNumber } = buildBoard();
-
-    it('should contain NxN cells (PathCard or undefined)', () => {
-        board.array.forEach(row =>
-            row.forEach(cell => {
-                expect(cell).not.toBeNull();
+    it('should contain NxN cells (PathCard or 0)', () => {
+        board.forEach(column =>
+            column.forEach(cell => {
+                expect(cell || cell === 0).toBeTruthy();
             })
         );
     });
 
     it('should contain 4 CORNERs', () => {
-        expect(board.get(0, 0).type).toBe(Type.CORNER);
-        expect(board.get(0, 6).type).toBe(Type.CORNER);
-        expect(board.get(6, 0).type).toBe(Type.CORNER);
-        expect(board.get(6, 6).type).toBe(Type.CORNER);
+        expect(board[0][0].type).toBe(Type.CORNER);
+        expect(board[0][6].type).toBe(Type.CORNER);
+        expect(board[6][0].type).toBe(Type.CORNER);
+        expect(board[6][6].type).toBe(Type.CORNER);
     });
 
     it('should contain 12 target path cards', () => {
@@ -32,8 +36,8 @@ describe('Board', () => {
     });
 
     it('should only contain target paths which are either a CORNER or a CROSS', () => {
-        board.array.forEach((row, y) => {
-            row.forEach((card, x) => {
+        board.forEach((column, x) => {
+            column.forEach((card, y) => {
                 if (x % 2 == 0 && y % 2 == 0) {
                     expect(card).not.toBeNull();
                     expect(
@@ -42,7 +46,7 @@ describe('Board', () => {
                     expect(card.x).toBe(x);
                     expect(card.y).toBe(y);
                 } else {
-                    expect(card).toBeUndefined();
+                    expect(card).toBe(0);
                 }
             });
         });
@@ -54,7 +58,7 @@ describe('PathDeck', () => {
     const deck = buildPathDeck(targetNumber);
 
     test('total number of path cards', () => {
-        const expectedTotalNumberOfPathCards = 1 + board.size() * board.size();
+        const expectedTotalNumberOfPathCards = 1 + board.length * board.length;
         const numberOfCORNER = 4;
         expect(numberOfCORNER + targetNumber + deck.length).toBe(
             expectedTotalNumberOfPathCards
@@ -106,7 +110,9 @@ describe('TargetDeck', () => {
 });
 
 describe('InitPlayers with 1 player', () => {
-    const players = initPlayers(1);
+    const { board } = buildBoard();
+
+    const players = initPlayers(board, 1);
 
     it('should contain 1 player', () => {
         expect(players).toHaveLength(1);
@@ -114,14 +120,16 @@ describe('InitPlayers with 1 player', () => {
 
     it('should be green and be in (0,0)', () => {
         expect(players[0].color).toEqual('green');
-        expect(players[0].x).toBe(0);
-        expect(players[0].y).toBe(0);
+        expect(players[0].pathCard.x).toBe(0);
+        expect(players[0].pathCard.y).toBe(0);
         expect(players[0].targetCards).toHaveLength(0);
     });
 });
 
 describe('InitPlayers with 4 player', () => {
-    const players = initPlayers(4);
+    const { board } = buildBoard();
+
+    const players = initPlayers(board, 4);
 
     it('should contain 4 players', () => {
         expect(players).toHaveLength(4);
@@ -129,26 +137,26 @@ describe('InitPlayers with 4 player', () => {
 
     it('should assign the green color to player 0', () => {
         expect(players[0].color).toEqual('green');
-        expect(players[0].x).toBe(0);
-        expect(players[0].y).toBe(0);
+        expect(players[0].pathCard.x).toBe(0);
+        expect(players[0].pathCard.y).toBe(0);
         expect(players[0].targetCards).toHaveLength(0);
     });
     it('should assign the red color to player 1', () => {
         expect(players[1].color).toEqual('red');
-        expect(players[1].x).toBe(0);
-        expect(players[1].y).toBe(6);
+        expect(players[1].pathCard.x).toBe(0);
+        expect(players[1].pathCard.y).toBe(6);
         expect(players[1].targetCards).toHaveLength(0);
     });
     it('should assign the yellow color to player 2', () => {
         expect(players[2].color).toEqual('yellow');
-        expect(players[2].x).toBe(6);
-        expect(players[2].y).toBe(6);
+        expect(players[2].pathCard.x).toBe(6);
+        expect(players[2].pathCard.y).toBe(6);
         expect(players[2].targetCards).toHaveLength(0);
     });
     it('should assign the blue color to player 3', () => {
         expect(players[3].color).toEqual('blue');
-        expect(players[3].x).toBe(6);
-        expect(players[3].y).toBe(0);
+        expect(players[3].pathCard.x).toBe(6);
+        expect(players[3].pathCard.y).toBe(0);
         expect(players[3].targetCards).toHaveLength(0);
     });
 });
@@ -157,25 +165,31 @@ describe('Deal cards ', () => {
     it('should deal 24 cards to 1 player', () => {
         const nbPlayers = 1;
         const nbCards = 24;
-        const players = initPlayers(nbPlayers);
+        const { board } = buildBoard();
+        const players = initPlayers(board, nbPlayers);
         const deck = buildTargetDeck(nbCards);
         expect(players).toHaveLength(nbPlayers);
         expect(deck).toHaveLength(nbCards);
 
-        dealCards(players, deck);
-        expect(players[0].targetCards).toHaveLength(nbCards / nbPlayers);
+        const playersWithTargetCards = dealCards(players, deck);
+        expect(playersWithTargetCards[0].targetCards).toHaveLength(
+            nbCards / nbPlayers
+        );
     });
 
     it('should deal 12 cards to 2 players', () => {
         const nbPlayers = 2;
         const nbCards = 24;
-        const players = initPlayers(nbPlayers);
+        const { board } = buildBoard();
+        const players = initPlayers(board, nbPlayers);
         const deck = buildTargetDeck(nbCards);
         expect(players).toHaveLength(nbPlayers);
         expect(deck).toHaveLength(nbCards);
 
-        dealCards(players, deck);
-        expect(players[0].targetCards).toHaveLength(nbCards / nbPlayers);
+        const playersWithTargetCards = dealCards(players, deck);
+        expect(playersWithTargetCards[0].targetCards).toHaveLength(
+            nbCards / nbPlayers
+        );
     });
 });
 
@@ -197,10 +211,7 @@ describe('InitGame 1 player, 24 target cards', () => {
     });
 
     it('should contain 49 path cards on board', () => {
-        const flattenArray = board.array.reduce(
-            (acc, val) => acc.concat(val),
-            []
-        );
+        const flattenArray = board.reduce((acc, val) => acc.concat(val), []);
         expect(flattenArray.filter(element => element)).toHaveLength(49);
     });
 });
@@ -219,5 +230,73 @@ describe('InitGame 4 players, 24 target cards', () => {
         expect(remainingPathCard).not.toBeNull();
         expect(remainingPathCard.type).not.toBeNull();
         expect(remainingPathCard.direction).not.toBeNull();
+    });
+});
+
+describe('insert a pathCard into Board', () => {
+    const { board: oldBoard, remainingPathCard } = initGame(1, 24);
+    const cardToInsert = movePathCardTo(remainingPathCard, 1, -1);
+
+    const {
+        board: newBoard,
+        pathCard: extractedCard,
+    } = insertPathCardIntoBoard(oldBoard, cardToInsert);
+
+    it('should be in 1, -1', () => {
+        expect(cardToInsert.x).toBe(1);
+        expect(cardToInsert.y).toBe(-1);
+    });
+    it('should be in 1, 7', () => {
+        expect(extractedCard.x).toBe(1);
+        expect(extractedCard.y).toBe(7);
+    });
+    it('should have inserted remaining card', () => {
+        expect(newBoard[1][0].type).toBe(cardToInsert.type);
+        expect(newBoard[1][0].direction).toBe(cardToInsert.direction);
+    });
+    it('should have extracted board[1][6]', () => {
+        expect(oldBoard[1][6].type).toBe(extractedCard.type);
+        expect(oldBoard[1][6].direction).toBe(extractedCard.direction);
+    });
+});
+
+describe('insert a pathCard up and down', () => {
+    const { board: oldBoard, remainingPathCard } = initGame(1, 24);
+    const cardToInsert = movePathCardTo(remainingPathCard, 1, -1);
+    const {
+        board: newBoard,
+        pathCard: extractedCard,
+    } = insertPathCardIntoBoard(oldBoard, cardToInsert);
+    const {
+        board: newBoard2,
+        pathCard: extractedCard2,
+    } = insertPathCardIntoBoard(newBoard, extractedCard);
+    it('should be in 1, -1', () => {
+        expect(extractedCard2.x).toBe(1);
+        expect(extractedCard2.y).toBe(-1);
+    });
+    it('should do the identity', () => {
+        expect(oldBoard).toEqual(newBoard2);
+    });
+});
+
+describe('insert a pathCard into all possible positions', () => {
+    const { board, remainingPathCard } = initGame(1, 24);
+
+    PATH_CARD_INSERTION_POSITION.forEach(position => {
+        const { x, y } = position;
+        const cardToInsert = movePathCardTo(remainingPathCard, x, y);
+        const {
+            board: newBoard1,
+            pathCard: extractedPathCard1,
+        } = insertPathCardIntoBoard(board, cardToInsert);
+        const {
+            board: newBoard2,
+            pathCard: extractedPathCard2,
+        } = insertPathCardIntoBoard(newBoard1, extractedPathCard1);
+        it('should do the identity', () => {
+            expect(board).toEqual(newBoard2);
+            expect(cardToInsert).toEqual(extractedPathCard2);
+        });
     });
 });

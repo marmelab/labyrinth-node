@@ -11,6 +11,12 @@ module.exports = {
         'prettier',
         'plugin:jest/recommended',
     ],
+    parserOptions: {
+        ecmaVersion: 6,
+        ecmaFeatures: {
+            experimentalObjectRestSpread: true,
+        },
+    },
     plugins: ['import', 'prettier', 'jest'],
     rules: {
         'prettier/prettier': [
@@ -23,7 +29,7 @@ module.exports = {
         ],
         'import/no-extraneous-dependencies': 'off',
         'no-console': ['error', { allow: ['warn', 'error'] }],
-        'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+        'no-unused-vars': ['error', { ignoreRestSiblings: true, args: 'none' }],
         'jest/no-disabled-tests': 'warn',
         'jest/no-focused-tests': 'error',
         'jest/no-identical-title': 'off',

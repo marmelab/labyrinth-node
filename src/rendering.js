@@ -1,5 +1,6 @@
-const { Type } = require('./PathCard');
+const { Type } = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
+const assert = require('assert').strict;
 
 const TERMINAL_HEIGHT = 35;
 const TERMINAL_WIDTH = 80;
@@ -35,10 +36,10 @@ function getScreenCoordinatesFromBoardPosition(x, y) {
 }
 
 function renderBoard(board) {
-    for (let y = 0; y < board.size(); y++) {
-        for (let x = 0; x < board.size(); x++) {
+    for (let y = 0; y < board.length; y++) {
+        for (let x = 0; x < board.length; x++) {
             const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
-            renderPathCardAtScreenCoordinates(i, j, board.get(y, x));
+            renderPathCardAtScreenCoordinates(i, j, board[x][y]);
         }
     }
 }
@@ -74,9 +75,10 @@ function renderPathCardRepresentationAtScreenCoordinates(i, j, tile, target) {
 
 function renderPlayers(players) {
     players.forEach(p => {
-        const { i, j } = getScreenCoordinatesFromBoardPosition(p.x, p.y);
-        term.moveTo(1 + i, 1 + j); // +1 for the middle
-        term.bgBlue[p.color]('△');
+        const { x, y } = p.pathCard;
+        const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
+        term.moveTo(1 + i, 1 + j); // +1 for the center of the tile
+        term.bgBlue[p.color]('☗');
     });
 }
 
