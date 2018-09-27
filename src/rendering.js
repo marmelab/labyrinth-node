@@ -1,6 +1,11 @@
 const { Type } = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
-const assert = require('assert').strict;
+const {
+    getCurrentTargetCard,
+    getNumberOfRemainingTargetCard,
+} = require('./player');
+
+const { argv } = require('./commandLineArguments');
 
 const TERMINAL_HEIGHT = 35;
 const TERMINAL_WIDTH = 80;
@@ -18,11 +23,11 @@ const STRAIGHT = ['┃.┃┃.┃┃.┃', '━━━...━━━', '┃.┃┃.
 const CROSS = ['┛.┗...━━━', '┃.┗┃..┃.┏', '━━━...┓.┏', '┛.┃..┃┓.┃'];
 
 function getTile(pathCard) {
-    if (pathCard && pathCard.type == Type.CORNER) {
+    if (pathCard && pathCard.type === Type.CORNER) {
         return CORNER[pathCard.direction];
-    } else if (pathCard && pathCard.type == Type.STRAIGHT) {
+    } else if (pathCard && pathCard.type === Type.STRAIGHT) {
         return STRAIGHT[pathCard.direction];
-    } else if (pathCard && pathCard.type == Type.CROSS) {
+    } else if (pathCard && pathCard.type === Type.CROSS) {
         return CROSS[pathCard.direction];
     }
     return null;
@@ -52,20 +57,32 @@ function renderPathCardAtScreenCoordinates(i, j, pathCard) {
 
 function renderPathCardRepresentationAtScreenCoordinates(i, j, tile, target) {
     if (tile) {
-        let cpt = 0;
+        let tileIndex = 0;
+        const bgColor = (i / 3 + j / 3) % 2 === 0;
         for (let y = 0; y < 3; y++) {
             for (let x = 0; x < 3; x++) {
-                const c = tile[cpt++];
-                if (c == '.') {
+                const c = tile[tileIndex++];
+                if (c === '.') {
                     term.moveTo(i + x, j + y).bgBlue(c);
                 } else {
-                    term.moveTo(i + x, j + y).red(c);
+                    if (!argv.bicolor || bgColor) {
+                        term.moveTo(i + x, j + y);
+                        term.red(true);
+                        term.bgBlack(true);
+                        term(c);
+                        term.bgBlack(false);
+                        term.red(false);
+                    } else {
+                        term.moveTo(i + x, j + y);
+                        term.red(true);
+                        term.bgColorRgb(47, 79, 79, true); // dark grey bg
+                        term(c);
+                        term.bgColorRgb(47, 79, 79, false);
+                        term.red(false);
+                    }
                 }
                 if (target !== null) {
-                    // transforms a number 0,1,... into 'A','B',...
-                    const symbol = String.fromCharCode(
-                        'A'.charCodeAt(0) + target
-                    );
+                    const symbol = targetNumberToChar(target);
                     term.moveTo(i + 1, j + 1).bgBlue(symbol);
                 }
             }
@@ -73,12 +90,15 @@ function renderPathCardRepresentationAtScreenCoordinates(i, j, tile, target) {
     }
 }
 
+const targetNumberToChar = number =>
+    String.fromCharCode('A'.charCodeAt(0) + number);
+
 function renderPlayers(players) {
     players.forEach(p => {
         const { x, y } = p.pathCard;
         const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
         term.moveTo(1 + i, 1 + j); // +1 for the center of the tile
-        term.bgBlue[p.color]('☗');
+        term.bgBlue('☗');
     });
 }
 
@@ -94,6 +114,29 @@ function renderInvite() {
     term.moveTo(i, j + 8, '↓ : Move player Down');
 }
 
+function renderPlayerInvite(player, score) {
+    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 2);
+    term.moveTo(i, j + 0, 'Player ' + player.color);
+    term.moveTo(i, j + 1, 'Score: ' + score);
+    term.moveTo(
+        i,
+        j + 2,
+        'Remaining target cards: ' + getNumberOfRemainingTargetCard(player)
+    );
+    const targetCard = getCurrentTargetCard(player);
+    term.moveTo(
+        i,
+        j + 3,
+        'Current target card: ' + targetNumberToChar(targetCard.target)
+    );
+}
+const renderDebugInvite = text => {
+    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 0);
+    term.eraseArea(i, j, 50, 1);
+
+    term.moveTo(i, j + 0, 'Debug: ' + text);
+};
+
 function renderRemainingPathCard(card) {
     const { i, j } = getScreenCoordinatesFromBoardPosition(card.x, card.y);
     renderPathCardAtScreenCoordinates(i, j, card);
@@ -106,10 +149,12 @@ function erasePathCard(pathCard) {
     );
     term.eraseArea(i, j, 3, 3);
 }
+
 module.exports = {
     renderPathCardAtScreenCoordinates,
     renderPlayers,
     renderInvite,
+    renderPlayerInvite,
     renderPathCardRepresentationAtScreenCoordinates,
     renderBoard,
     renderRemainingPathCard,
@@ -117,4 +162,5 @@ module.exports = {
     STRAIGHT,
     CORNER,
     CROSS,
+    renderDebugInvite,
 };

@@ -1,6 +1,6 @@
 const { createPathCard, Type, Direction } = require('./pathCard');
 const { createTargetCard } = require('./targetCard');
-const { createEmptyBoard } = require('./board');
+const { createEmptyBoard, flattenBoard } = require('./board');
 const { createPlayer, addTargetCardToPlay } = require('./player');
 const { produce } = require('immer');
 
@@ -129,44 +129,47 @@ const buildBoard = () => {
             });
         });
 
-    let board = createEmptyBoard();
-    board = initBoardFromRow(board, pathCardToInsert);
+    const board = initBoardFromRow(createEmptyBoard(), pathCardToInsert);
 
-    return { board: board, targetNumber: targetNumber };
+    return Object.freeze({ board: board, targetNumber: targetNumber });
 };
 
-const buildPathDeck = initialTargetNumber => {
-    const res = [];
+const buildPathDeck = initialTargetNumber =>
+    produce([], draft => {
+        for (let i = 0; i < 13; i++) {
+            draft.push(createPathCard({ type: Type.STRAIGHT }));
+        }
+        for (let i = 0; i < 9; i++) {
+            draft.push(createPathCard({ type: Type.CORNER }));
+        }
 
-    for (let i = 0; i < 13; i++) {
-        res.push(createPathCard({ type: Type.STRAIGHT }));
-    }
-    for (let i = 0; i < 9; i++) {
-        res.push(createPathCard({ type: Type.CORNER }));
-    }
-
-    let targetNumber = initialTargetNumber;
-    for (let i = 0; i < 6; i++) {
-        res.push(createPathCard({ type: Type.CORNER, target: targetNumber++ }));
-    }
-    for (let i = 0; i < 6; i++) {
-        res.push(createPathCard({ type: Type.CROSS, target: targetNumber++ }));
-    }
-    return res;
-};
+        let targetNumber = initialTargetNumber;
+        for (let i = 0; i < 6; i++) {
+            draft.push(
+                createPathCard({ type: Type.CORNER, target: targetNumber++ })
+            );
+        }
+        for (let i = 0; i < 6; i++) {
+            draft.push(
+                createPathCard({ type: Type.CROSS, target: targetNumber++ })
+            );
+        }
+    });
 
 const buildTargetDeck = maxTargetNumber =>
-    Array.from({ length: maxTargetNumber }, (_, k) => createTargetCard(k));
+    Object.freeze(
+        Array.from({ length: maxTargetNumber }, (_, k) => createTargetCard(k))
+    );
 
-function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-}
+const shuffle = array =>
+    produce(array, draft => {
+        for (let i = draft.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [draft[i], draft[j]] = [draft[j], draft[i]];
+        }
+    });
 
-function initPlayers(board, nbPlayers) {
+const initPlayers = (board, nbPlayers) => {
     const STARTING_POSITION_FOR_PLAYER = [
         { x: 0, y: 0, color: 'green' },
         { x: 0, y: 6, color: 'red' },
@@ -174,33 +177,35 @@ function initPlayers(board, nbPlayers) {
         { x: 6, y: 0, color: 'blue' },
     ];
 
-    const players = Array.from({ length: nbPlayers }, (_, k) => {
-        const { x, y, color } = STARTING_POSITION_FOR_PLAYER[k];
-        return createPlayer(color, board[x][y], []);
-    });
+    const players = Object.freeze(
+        Array.from({ length: nbPlayers }, (_, k) => {
+            const { x, y, color } = STARTING_POSITION_FOR_PLAYER[k];
+            return createPlayer(color, board[x][y], []);
+        })
+    );
     return players;
-}
+};
 
-function dealCards(players, cards) {
+const dealCards = (players, cards) => {
     const nbPlayers = players.length;
     const nbCards = cards.length;
-    let newPlayers = [];
-    for (let i = 0; i < nbPlayers; i++) {
-        let player = players[i];
-        for (let j = 0; j < nbCards / nbPlayers; j++) {
-            player = addTargetCardToPlay(player, cards.pop());
-        }
-        newPlayers = newPlayers.concat(player);
-    }
+    const nbCardsPerPlayer = nbCards / nbPlayers;
+    let newPlayers = produce(players, draft => {
+        cards.forEach((card, index) => {
+            const indexPlayer = Math.trunc(index / nbCardsPerPlayer);
+            draft[indexPlayer] = addTargetCardToPlay(draft[indexPlayer], card);
+        });
+    });
     return newPlayers;
-}
+};
 
-const dealCardsOnBoard = (board, shuffledPathDeck) =>
-    produce(board, draft => {
+const dealCardsOnBoard = (board, shuffledPathDeck) => {
+    let deck = shuffledPathDeck.slice();
+    const newBoard = produce(board, draft => {
         board.forEach((column, x) => {
             column.forEach((cell, y) => {
                 if (!cell) {
-                    const pathCard = shuffledPathDeck.pop();
+                    const pathCard = deck.pop();
                     const directions = Object.values(Direction);
                     const randomDirection =
                         directions[
@@ -218,6 +223,9 @@ const dealCardsOnBoard = (board, shuffledPathDeck) =>
         });
     });
 
+    return Object.freeze({ board: newBoard, remaingPathCard: deck.pop() });
+};
+
 function initGame(nbPlayers, nbTargetCards) {
     const {
         board: board,
@@ -226,25 +234,36 @@ function initGame(nbPlayers, nbTargetCards) {
 
     const pathDeck = buildPathDeck(numberOfTargetAlreadyOnBoard);
     const shuffledPathDeck = shuffle(pathDeck);
-    const newBoard = dealCardsOnBoard(board, shuffledPathDeck);
-    const remainingPathCard = pathDeck.pop();
-
-    const targetDeck = buildTargetDeck(nbTargetCards);
-    const suffledTargetDeck = shuffle(targetDeck);
+    const {
+        board: newBoard,
+        remaingPathCard: remainingPathCard,
+    } = dealCardsOnBoard(board, shuffledPathDeck);
 
     const playersWithPathCard = initPlayers(newBoard, nbPlayers);
+    const targetDeck = buildTargetDeck(nbTargetCards);
+    const suffledTargetDeck = shuffle(targetDeck);
 
     const playersWithTargetCards = dealCards(
         playersWithPathCard,
         suffledTargetDeck
     );
 
-    return {
+    return Object.freeze({
         board: newBoard,
         players: playersWithTargetCards,
         remainingPathCard: remainingPathCard,
-    };
+    });
 }
+
+const searchTargetCard = (board, targetCard) => {
+    const flattenArray = flattenBoard(board);
+    const pathCard = flattenArray.find(
+        pathCard => pathCard.target == targetCard.target
+    );
+    if (pathCard) {
+        return { x: pathCard.x, y: pathCard.y };
+    }
+};
 
 module.exports = {
     initGame,
@@ -254,4 +273,5 @@ module.exports = {
     buildPathDeck,
     buildTargetDeck,
     shuffle,
+    searchTargetCard,
 };

@@ -9,10 +9,12 @@ const { Direction } = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
 
 jest.mock('terminal-kit', () => {
-    const terminal = {};
+    const terminal = jest.fn(() => terminal);
     terminal.moveTo = jest.fn(() => terminal);
     terminal.red = jest.fn(() => terminal);
     terminal.bgBlue = jest.fn(() => terminal);
+    terminal.bgBlack = jest.fn(() => terminal);
+    terminal.bgRGB = jest.fn(() => terminal);
 
     return { terminal };
 });
@@ -34,7 +36,7 @@ describe('check tile size', () => {
 
 describe('Straight', () => {
     it('should render a straight-north with ┃ only', () => {
-        term.red.mockClear();
+        term.mockClear();
         term.bgBlue.mockClear();
         renderPathCardRepresentationAtScreenCoordinates(
             0,
@@ -42,15 +44,15 @@ describe('Straight', () => {
             STRAIGHT[Direction.NORTH],
             null
         );
-        expect(term.red.mock.calls).toHaveLength(6);
+        expect(term.mock.calls).toHaveLength(6);
         expect(term.bgBlue.mock.calls).toHaveLength(3);
         // The 1st argument of i-th call to red should be '┃'
         for (let i = 0; i < 6; i++) {
-            expect(term.red.mock.calls[i][0]).toBe('┃');
+            expect(term.mock.calls[i][0]).toBe('┃');
         }
     });
     it('should render a straight-east with ━ only', () => {
-        term.red.mockClear();
+        term.mockClear();
         term.bgBlue.mockClear();
         renderPathCardRepresentationAtScreenCoordinates(
             0,
@@ -58,17 +60,17 @@ describe('Straight', () => {
             STRAIGHT[Direction.EAST],
             null
         );
-        expect(term.red.mock.calls).toHaveLength(6);
+        expect(term.mock.calls).toHaveLength(6);
         expect(term.bgBlue.mock.calls).toHaveLength(3);
         for (let i = 0; i < 6; i++) {
-            expect(term.red.mock.calls[i][0]).toBe('━');
+            expect(term.mock.calls[i][0]).toBe('━');
         }
     });
 });
 
 describe('Corner', () => {
     it('should render a corner-north correctly', () => {
-        term.red.mockClear();
+        term.mockClear();
         term.bgBlue.mockClear();
         renderPathCardRepresentationAtScreenCoordinates(
             0,
@@ -76,13 +78,13 @@ describe('Corner', () => {
             CORNER[Direction.NORTH],
             null
         );
-        expect(term.red.mock.calls).toHaveLength(6);
+        expect(term.mock.calls).toHaveLength(6);
         expect(term.bgBlue.mock.calls).toHaveLength(3);
         const chars = '┃┗┃┗━━';
         for (let i = 0; i < 6; i++) {
-            expect(term.red.mock.calls[i][0]).toBe(chars[i]);
+            expect(term.mock.calls[i][0]).toBe(chars[i]);
         }
-        term.red.mockClear();
+        term.mockClear();
         term.bgBlue.mockClear();
     });
 });

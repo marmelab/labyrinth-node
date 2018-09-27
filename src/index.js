@@ -1,176 +1,73 @@
-const { produce } = require('immer');
-const {
-    renderBoard,
-    renderPlayers,
-    renderInvite,
-    renderRemainingPathCard,
-    erasePathCard,
-} = require('./rendering');
-
-const {
-    PATH_CARD_INSERTION_POSITION,
-    insertPathCardIntoBoard,
-} = require('./board');
-
-const { initGame } = require('./gameFactory');
-const {
-    getExitDirections,
-    Direction,
-    rotateDirection,
-    movePathCardTo,
-} = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
-const { createPlayer } = require('./player');
 
-const NB_PLAYER = 1;
-const NB_TARGET_CARD = 24;
+const {
+    movePlayer,
+    createGame,
+    renderGame,
+    moveRemainingPathCardClockwise,
+    moveRemainingPathCardAntiClockwise,
+    rotateRemainingPathCard,
+    insertRemainingPathCard,
+} = require('./game');
 
-let { board, players, remainingPathCard } = initGame(NB_PLAYER, NB_TARGET_CARD);
+const { Direction } = require('./pathCard');
 
-function getCoordinatesForAMove(x, y, direction) {
-    switch (direction) {
-        case Direction.NORTH:
-            return { x: x, y: y + 1 };
-        case Direction.SOUTH:
-            return { x: x, y: y - 1 };
-        case Direction.EAST:
-            return { x: x + 1, y: y };
-        case Direction.WEST:
-            return { x: x - 1, y: y };
-    }
+const { argv, help, debug } = require('./commandLineArguments');
+
+if (help()) {
+    console.log('Labyrinth game options:');
+    console.log('  [--help|-h]');
+    console.log('  [--debug]');
+    console.log('  [--godMode]');
+    console.log('  [--bicolor]');
+    process.exit();
 }
 
-function movePlayer(player, direction) {
-    const { x, y } = player.pathCard;
-    const { x: nextX, y: nextY } = getCoordinatesForAMove(x, y, direction);
-    if (
-        nextX >= 0 &&
-        nextX < board.length &&
-        nextY >= 0 &&
-        nextY < board.length
-    ) {
-        const pathCard = board[x][y];
-        if (getExitDirections(pathCard).includes(direction)) {
-            const nextPathCard = board[nextX][nextY];
-            const nextPathCardExitDirections = getExitDirections(nextPathCard);
-            const nextPathCardEntranceDirections = nextPathCardExitDirections.map(
-                direction => rotateDirection(direction, 2)
-            );
-            if (nextPathCardEntranceDirections.includes(direction)) {
-                // the move is possible
-                return createPlayer(
-                    player.color,
-                    nextPathCard,
-                    player.targetCards
-                );
-            }
-        }
-    }
-    return player;
+if (Object.keys(argv).length > 1) {
+    const options = Object.keys(argv).slice(1);
+    term.windowTitle('Labyrinth game [' + options + ']');
+} else {
+    term.windowTitle('Labyrinth game');
 }
 
-term.windowTitle('Labyrinth game');
 term.hideCursor();
 term.eraseDisplay();
 
-renderBoard(board);
-renderPlayers(players);
-renderInvite();
-
-let currentIndexOfPathCardInsertionPosition = 0;
-remainingPathCard = movePathCardTo(
-    remainingPathCard,
-    PATH_CARD_INSERTION_POSITION[currentIndexOfPathCardInsertionPosition].x,
-    PATH_CARD_INSERTION_POSITION[currentIndexOfPathCardInsertionPosition].y
-);
-renderRemainingPathCard(remainingPathCard);
+let game = createGame();
+renderGame(game);
 
 term.grabInput();
 term.on('key', function(key, matches, data) {
     switch (key) {
         case 'UP':
-            players[0] = movePlayer(players[0], Direction.NORTH);
-            renderBoard(board);
-            renderPlayers(players);
+            game = movePlayer(game, Direction.NORTH);
             break;
         case 'DOWN':
-            players[0] = movePlayer(players[0], Direction.SOUTH);
-            renderBoard(board);
-            renderPlayers(players);
+            game = movePlayer(game, Direction.SOUTH);
             break;
         case 'LEFT':
-            players[0] = movePlayer(players[0], Direction.WEST);
-            renderBoard(board);
-            renderPlayers(players);
+            game = movePlayer(game, Direction.WEST);
             break;
         case 'RIGHT':
-            players[0] = movePlayer(players[0], Direction.EAST);
-            renderBoard(board);
-            renderPlayers(players);
+            game = movePlayer(game, Direction.EAST);
             break;
         case 'j':
-            erasePathCard(remainingPathCard);
-            currentIndexOfPathCardInsertionPosition =
-                (PATH_CARD_INSERTION_POSITION.length +
-                    currentIndexOfPathCardInsertionPosition -
-                    1) %
-                PATH_CARD_INSERTION_POSITION.length;
-            remainingPathCard = movePathCardTo(
-                remainingPathCard,
-                PATH_CARD_INSERTION_POSITION[
-                    currentIndexOfPathCardInsertionPosition
-                ].x,
-                PATH_CARD_INSERTION_POSITION[
-                    currentIndexOfPathCardInsertionPosition
-                ].y
-            );
-            renderRemainingPathCard(remainingPathCard);
-
+            game = moveRemainingPathCardClockwise(game);
             break;
         case 'k':
-            erasePathCard(remainingPathCard);
-            currentIndexOfPathCardInsertionPosition =
-                (currentIndexOfPathCardInsertionPosition + 1) %
-                PATH_CARD_INSERTION_POSITION.length;
-            remainingPathCard = movePathCardTo(
-                remainingPathCard,
-                PATH_CARD_INSERTION_POSITION[
-                    currentIndexOfPathCardInsertionPosition
-                ].x,
-                PATH_CARD_INSERTION_POSITION[
-                    currentIndexOfPathCardInsertionPosition
-                ].y
-            );
-            renderRemainingPathCard(remainingPathCard);
-
+            game = moveRemainingPathCardAntiClockwise(game);
             break;
         case 'r':
         case 'R':
-            erasePathCard(remainingPathCard);
-            remainingPathCard = produce(remainingPathCard, draft => {
-                draft.direction = (remainingPathCard.direction + 1) % 4;
-            });
-            renderRemainingPathCard(remainingPathCard);
-
+            game = rotateRemainingPathCard(game);
             break;
         case 'ENTER': {
-            erasePathCard(remainingPathCard);
-            const {
-                board: newBoard,
-                pathCard: newRemainingPathCard,
-            } = insertPathCardIntoBoard(board, remainingPathCard);
-
-            renderRemainingPathCard(newRemainingPathCard);
-            renderBoard(newBoard);
-            renderPlayers(players);
-            board = newBoard;
-            remainingPathCard = newRemainingPathCard;
+            game = insertRemainingPathCard(game);
             break;
         }
         case 'CTRL_C':
             term.hideCursor();
-
-            process.exit();
+            term.processExit();
             break;
         default:
             // Echo anything else
@@ -182,3 +79,5 @@ term.on('key', function(key, matches, data) {
             break;
     }
 });
+
+module.exports = { debug };

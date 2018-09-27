@@ -8,11 +8,6 @@ const Direction = Object.freeze({
     WEST: 3,
 });
 
-function rotateDirection(direction, numberOfQuaters) {
-    const newDirection = (4 + direction + numberOfQuaters) % 4;
-    return newDirection;
-}
-
 const defaultPathCard = {
     type: null,
     x: null,
@@ -22,7 +17,7 @@ const defaultPathCard = {
 };
 
 const createPathCard = (parameters = {}) =>
-    Object.assign({}, defaultPathCard, parameters);
+    Object.freeze(Object.assign({}, defaultPathCard, parameters));
 
 const movePathCardTo = (card, toX, toY) =>
     produce(card, draft => {
@@ -30,22 +25,36 @@ const movePathCardTo = (card, toX, toY) =>
         draft.y = toY;
     });
 
+function getNextCoordinatesForAMove(x, y, direction) {
+    switch (direction) {
+        case Direction.NORTH:
+            return { x: x, y: y + 1 };
+        case Direction.SOUTH:
+            return { x: x, y: y - 1 };
+        case Direction.EAST:
+            return { x: x + 1, y: y };
+        case Direction.WEST:
+            return { x: x - 1, y: y };
+    }
+}
+
+const rotateDirection = numberOfQuaters => direction =>
+    (4 + direction + numberOfQuaters) % 4;
+
 const getExitDirections = card => {
-    if (card.type == Type.STRAIGHT) {
-        const directions = [Direction.NORTH, Direction.SOUTH];
-        return directions.map(direction =>
-            rotateDirection(direction, card.direction)
-        );
-    } else if (card.type == Type.CORNER) {
-        const directions = [Direction.NORTH, Direction.EAST];
-        return directions.map(direction =>
-            rotateDirection(direction, card.direction)
-        );
-    } else if (card.type == Type.CROSS) {
-        const directions = [Direction.NORTH, Direction.EAST, Direction.WEST];
-        return directions.map(direction =>
-            rotateDirection(direction, card.direction)
-        );
+    switch (card.type) {
+        case Type.STRAIGHT:
+            return [Direction.NORTH, Direction.SOUTH].map(
+                rotateDirection(card.direction)
+            );
+        case Type.CORNER:
+            return [Direction.NORTH, Direction.EAST].map(
+                rotateDirection(card.direction)
+            );
+        case Type.CROSS:
+            return [Direction.NORTH, Direction.EAST, Direction.WEST].map(
+                rotateDirection(card.direction)
+            );
     }
 };
 
@@ -56,4 +65,5 @@ module.exports = {
     Direction,
     rotateDirection,
     movePathCardTo,
+    getNextCoordinatesForAMove,
 };

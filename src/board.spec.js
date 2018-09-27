@@ -1,4 +1,4 @@
-const { createEmptyBoard } = require('./board');
+const { createEmptyBoard, flattenBoard } = require('./board');
 
 describe('Board', () => {
     const board = createEmptyBoard();
@@ -7,7 +7,7 @@ describe('Board', () => {
     });
 
     it('should contain length*length cells', () => {
-        const flattenArray = board.reduce((acc, val) => acc.concat(val), []);
+        const flattenArray = flattenBoard(board);
         expect(flattenArray).toHaveLength(board.length * board.length);
         flattenArray.forEach(element => expect(element).toBe(0));
     });
