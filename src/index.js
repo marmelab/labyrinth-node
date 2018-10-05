@@ -1,17 +1,7 @@
 const { terminal: term } = require('terminal-kit');
-
-const {
-    movePlayer,
-    createGame,
-    renderGame,
-    moveRemainingPathCardClockwise,
-    moveRemainingPathCardAntiClockwise,
-    rotateRemainingPathCard,
-    insertRemainingPathCard,
-} = require('./game');
-
-const { Direction } = require('./pathCard');
-
+const { createGame, handleEvent } = require('./game');
+const { renderGame } = require('./rendering');
+const { EVENT, STATE } = require('./constants');
 const { argv, help, debug } = require('./commandLineArguments');
 
 if (help()) {
@@ -20,6 +10,8 @@ if (help()) {
     console.log('  [--debug]');
     console.log('  [--godMode]');
     console.log('  [--bicolor]');
+    console.log('  [--nogui: do not render the game]');
+
     process.exit();
 }
 
@@ -30,54 +22,49 @@ if (Object.keys(argv).length > 1) {
     term.windowTitle('Labyrinth game');
 }
 
-term.hideCursor();
-term.eraseDisplay();
-
 let game = createGame();
-renderGame(game);
 
-term.grabInput();
-term.on('key', function(key, matches, data) {
-    switch (key) {
-        case 'UP':
-            game = movePlayer(game, Direction.NORTH);
-            break;
-        case 'DOWN':
-            game = movePlayer(game, Direction.SOUTH);
-            break;
-        case 'LEFT':
-            game = movePlayer(game, Direction.WEST);
-            break;
-        case 'RIGHT':
-            game = movePlayer(game, Direction.EAST);
-            break;
-        case 'j':
-            game = moveRemainingPathCardClockwise(game);
-            break;
-        case 'k':
-            game = moveRemainingPathCardAntiClockwise(game);
-            break;
-        case 'r':
-        case 'R':
-            game = rotateRemainingPathCard(game);
-            break;
-        case 'ENTER': {
-            game = insertRemainingPathCard(game);
-            break;
-        }
-        case 'CTRL_C':
+if (!argv.nogui) {
+    term.hideCursor();
+    term.eraseDisplay();
+    renderGame(game);
+
+    term.grabInput();
+    term.on('key', function(key, matches, data) {
+        if (game.state === STATE.END) {
             term.hideCursor();
             term.processExit();
-            break;
-        default:
-            // Echo anything else
-            term.noFormat(
-                Buffer.isBuffer(data.code)
-                    ? data.code
-                    : String.fromCharCode(data.code)
-            );
-            break;
-    }
-});
+        }
 
+        switch (key) {
+            case 'UP':
+                game = handleEvent(game, EVENT.UP);
+                break;
+            case 'DOWN':
+                game = handleEvent(game, EVENT.DOWN);
+                break;
+            case 'LEFT':
+                game = handleEvent(game, EVENT.LEFT);
+                break;
+            case 'RIGHT':
+                game = handleEvent(game, EVENT.RIGHT);
+                break;
+            case 'r':
+            case 'R':
+                game = handleEvent(game, EVENT.ROTATE);
+                break;
+            case 'ENTER':
+                game = handleEvent(game, EVENT.VALIDATE);
+                break;
+            case 'CTRL_C':
+                term.hideCursor();
+                term.processExit();
+                break;
+            default:
+                // Echo anything else
+                term.noFormat(Buffer.isBuffer(data.code) ? data.code : String.fromCharCode(data.code));
+                break;
+        }
+    });
+}
 module.exports = { debug };

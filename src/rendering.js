@@ -1,11 +1,9 @@
 const { Type } = require('./pathCard');
 const { terminal: term } = require('terminal-kit');
-const {
-    getCurrentTargetCard,
-    getNumberOfRemainingTargetCard,
-} = require('./player');
+const { getCurrentTargetCard, getNumberOfRemainingTargetCard } = require('./player');
 
 const { argv } = require('./commandLineArguments');
+const { STATE } = require('./constants');
 
 const TERMINAL_HEIGHT = 35;
 const TERMINAL_WIDTH = 80;
@@ -40,14 +38,35 @@ function getScreenCoordinatesFromBoardPosition(x, y) {
     return { i, j };
 }
 
-function renderBoard(board) {
-    for (let y = 0; y < board.length; y++) {
-        for (let x = 0; x < board.length; x++) {
+const renderGame = game => {
+    renderBoard(game);
+    renderRemainingPathCard(game);
+    renderPlayers(game);
+    renderInvite(game);
+    renderPlayerInvite(game);
+};
+
+const renderBoard = ({ board }) => {
+    board.forEach((column, x) => {
+        column.forEach((cell, y) => {
             const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
-            renderPathCardAtScreenCoordinates(i, j, board[x][y]);
-        }
-    }
-}
+            renderPathCardAtScreenCoordinates(i, j, cell);
+        });
+    });
+};
+
+const erasePathCard = ({ x, y }) => {
+    const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
+    term.eraseArea(i, j, 3, 3);
+};
+
+const renderPathCard = pathCard => {
+    const { x, y } = pathCard;
+    const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
+    renderPathCardAtScreenCoordinates(i, j, pathCard);
+};
+
+const renderRemainingPathCard = ({ remainingPathCard }) => renderPathCard(remainingPathCard);
 
 function renderPathCardAtScreenCoordinates(i, j, pathCard) {
     const tile = getTile(pathCard);
@@ -90,65 +109,53 @@ function renderPathCardRepresentationAtScreenCoordinates(i, j, tile, target) {
     }
 }
 
-const targetNumberToChar = number =>
-    String.fromCharCode('A'.charCodeAt(0) + number);
+const targetNumberToChar = number => String.fromCharCode('A'.charCodeAt(0) + number);
 
-function renderPlayers(players) {
-    players.forEach(p => {
-        const { x, y } = p.pathCard;
+const renderPlayers = ({ players }) => {
+    players.forEach(({ x, y }) => {
         const { i, j } = getScreenCoordinatesFromBoardPosition(x, y);
         term.moveTo(1 + i, 1 + j); // +1 for the center of the tile
         term.bgBlue('☗');
     });
-}
-
-function renderInvite() {
-    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 6);
-    term.moveTo(i, j + 0, 'j : Move Path Card Clockwise');
-    term.moveTo(i, j + 1, 'k : Move Path Card Anti-Clockwise');
-    term.moveTo(i, j + 2, 'R : Rotate Path Card Clockwise');
-    term.moveTo(i, j + 3, 'ENTER : Insert the Path Card');
-    term.moveTo(i, j + 5, '← : Move player Left');
-    term.moveTo(i, j + 6, '→ : Move player Right');
-    term.moveTo(i, j + 7, '↑ : Move player Up');
-    term.moveTo(i, j + 8, '↓ : Move player Down');
-}
-
-function renderPlayerInvite(player, score) {
-    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 2);
-    term.moveTo(i, j + 0, 'Player ' + player.color);
-    term.moveTo(i, j + 1, 'Score: ' + score);
-    term.moveTo(
-        i,
-        j + 2,
-        'Remaining target cards: ' + getNumberOfRemainingTargetCard(player)
-    );
-    const targetCard = getCurrentTargetCard(player);
-    term.moveTo(
-        i,
-        j + 3,
-        'Current target card: ' + targetNumberToChar(targetCard.target)
-    );
-}
-const renderDebugInvite = text => {
-    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 0);
-    term.eraseArea(i, j, 50, 1);
-
-    term.moveTo(i, j + 0, 'Debug: ' + text);
 };
 
-function renderRemainingPathCard(card) {
-    const { i, j } = getScreenCoordinatesFromBoardPosition(card.x, card.y);
-    renderPathCardAtScreenCoordinates(i, j, card);
-}
+const renderInvite = ({ state }) => {
+    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 6);
+    term.eraseArea(i, j, 40, 8);
+    if (state === STATE.TO_MOVE) {
+        term.moveTo(i, j + 0, '←, →, ↑, ↓: to move player');
+        term.moveTo(i, j + 1, 'ENTER:      to validate');
+    } else if (state === STATE.TO_INSERT) {
+        term.moveTo(i, j + 0, '→, ↓ : to move path card clockwise');
+        term.moveTo(i, j + 1, '←, ↑ : to move path card anti-clockwise');
+        term.moveTo(i, j + 2, 'r, R : to rotate path card');
+        term.moveTo(i, j + 3, 'ENTER : to insert the path card');
+    }
+};
 
-function erasePathCard(pathCard) {
-    const { i, j } = getScreenCoordinatesFromBoardPosition(
-        pathCard.x,
-        pathCard.y
-    );
-    term.eraseArea(i, j, 3, 3);
-}
+const renderPlayerInvite = ({ currentPlayerIndex, players, scores, state: gameState }) => {
+    const player = players[currentPlayerIndex];
+    const score = scores[currentPlayerIndex];
+
+    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 2);
+    const actionToPrint = gameState === STATE.TO_MOVE ? 'please MOVE your pawn' : 'please INSERT a path card';
+
+    term.eraseArea(i, j + 0, 40, 4);
+    term.moveTo(i, j + 0, 'Player ' + player.color + ', ' + actionToPrint);
+    term.moveTo(i, j + 1, 'Score: ' + score);
+    term.moveTo(i, j + 2, 'Remaining target cards: ' + getNumberOfRemainingTargetCard(player));
+    const targetCard = getCurrentTargetCard(player);
+    term.moveTo(i, j + 3, 'Current target card: ' + targetNumberToChar(targetCard.target));
+};
+
+const renderGameOver = ({ players, scores }) => {
+    const { i, j } = getScreenCoordinatesFromBoardPosition(9, 2);
+    term.eraseArea(i, j + 0, 40, 5);
+    term.moveTo(i, j + 0, 'GAME OVER');
+    players.forEach((player, y) => {
+        term.moveTo(i, j + 1 + y, 'Player ' + players[y].color + ' has score: ' + scores[y]);
+    });
+};
 
 module.exports = {
     renderPathCardAtScreenCoordinates,
@@ -157,10 +164,12 @@ module.exports = {
     renderPlayerInvite,
     renderPathCardRepresentationAtScreenCoordinates,
     renderBoard,
+    renderGame,
+    renderPathCard,
     renderRemainingPathCard,
     erasePathCard,
     STRAIGHT,
     CORNER,
     CROSS,
-    renderDebugInvite,
+    renderGameOver,
 };

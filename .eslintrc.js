@@ -24,9 +24,11 @@ module.exports = {
             {
                 singleQuote: true,
                 tabWidth: 4,
+                printWidth: 120,
                 trailingComma: 'es5',
             },
         ],
+
         'import/no-extraneous-dependencies': 'off',
         'no-console': ['error', { allow: ['warn', 'error'] }],
         'no-unused-vars': ['error', { ignoreRestSiblings: true, args: 'none' }],

@@ -23,6 +23,7 @@
     },
     "homepage": "https://github.com/marmelab/labyrinth-node",
     "devDependencies": {
+        "deep-equal": "^1.0.1",
         "eslint": "^5.6.0",
         "eslint-config-prettier": "^3.0.1",
         "eslint-plugin-import": "^2.14.0",

@@ -14,13 +14,18 @@ const defaultPathCard = {
     y: null,
     direction: Direction.NORTH,
     target: null,
+    id: null,
 };
 
-const createPathCard = (parameters = {}) =>
-    Object.freeze(Object.assign({}, defaultPathCard, parameters));
+const getPathCardFactory = () => {
+    let id = 1;
+    return (parameters = {}) => Object.freeze(Object.assign({}, defaultPathCard, parameters, { id: id++ }));
+};
 
-const movePathCardTo = (card, toX, toY) =>
-    produce(card, draft => {
+const createPathCard = getPathCardFactory();
+
+const movePathCardTo = (pathCard, toX, toY) =>
+    produce(pathCard, draft => {
         draft.x = toX;
         draft.y = toY;
     });
@@ -38,23 +43,16 @@ function getNextCoordinatesForAMove(x, y, direction) {
     }
 }
 
-const rotateDirection = numberOfQuaters => direction =>
-    (4 + direction + numberOfQuaters) % 4;
+const rotateDirection = numberOfQuaters => direction => (4 + direction + numberOfQuaters) % 4;
 
 const getExitDirections = card => {
     switch (card.type) {
         case Type.STRAIGHT:
-            return [Direction.NORTH, Direction.SOUTH].map(
-                rotateDirection(card.direction)
-            );
+            return [Direction.NORTH, Direction.SOUTH].map(rotateDirection(card.direction));
         case Type.CORNER:
-            return [Direction.NORTH, Direction.EAST].map(
-                rotateDirection(card.direction)
-            );
+            return [Direction.NORTH, Direction.EAST].map(rotateDirection(card.direction));
         case Type.CROSS:
-            return [Direction.NORTH, Direction.EAST, Direction.WEST].map(
-                rotateDirection(card.direction)
-            );
+            return [Direction.NORTH, Direction.EAST, Direction.WEST].map(rotateDirection(card.direction));
     }
 };
 
@@ -66,4 +64,5 @@ module.exports = {
     rotateDirection,
     movePathCardTo,
     getNextCoordinatesForAMove,
+    getPathCardFactory,
 };

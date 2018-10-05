@@ -1,9 +1,4 @@
-const {
-    createPathCard,
-    getExitDirections,
-    Type,
-    Direction,
-} = require('./pathCard');
+const { createPathCard, getExitDirections, Type, Direction, getPathCardFactory } = require('./pathCard');
 
 test('PathCard constructor with default values', () => {
     const card = createPathCard();
@@ -12,6 +7,24 @@ test('PathCard constructor with default values', () => {
     expect(card.y).toBeNull();
     expect(card.direction).toBe(Direction.NORTH);
     expect(card.target).toBeNull();
+});
+
+it('should initialize pathcard.id to 1', () => {
+    const myCreatePathCard = getPathCardFactory();
+    const card = myCreatePathCard();
+    expect(card.id).toBe(1);
+});
+
+it('should initialize pathcard.id to 1', () => {
+    const myCreatePathCard = getPathCardFactory();
+    myCreatePathCard();
+    const card2 = myCreatePathCard();
+    expect(card2.id).toBe(2);
+});
+it('should increment pathcard.id by one', () => {
+    const card1 = createPathCard();
+    const card2 = createPathCard();
+    expect(card2.id).toBe(card1.id + 1);
 });
 
 test('PathCard constructor with custom values', () => {
